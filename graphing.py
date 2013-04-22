@@ -41,7 +41,7 @@ def save(path, fignum=None, close=True, width=None, height=None,
     """
 
     # make sure we have a list of extensions
-    if not hasattr(ext, '__iter__'):
+    if ext is not None and not hasattr(ext, '__iter__'):
         ext = [ext]
 
     # Extract the directory and filename from the given path
@@ -52,6 +52,11 @@ def save(path, fignum=None, close=True, width=None, height=None,
     # If the directory does not exist, create it
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+    # infer the extension if ext is None
+    if ext is None:
+        basename, ex = os.path.splitext(basename)
+        ext = [ex]
 
     for ex in ext:
         # The final path to save to
