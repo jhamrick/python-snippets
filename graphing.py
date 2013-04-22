@@ -59,7 +59,7 @@ def save(path, fignum=None, close=True, width=None, height=None,
         savepath = os.path.join(directory, filename)
 
         if verbose:
-            sys.stdout("Saving figure to '%s'..." % savepath)
+            sys.stdout.write("Saving figure to '%s'..." % savepath)
 
         # Actually save the figure
         plt.savefig(savepath)
@@ -69,4 +69,4 @@ def save(path, fignum=None, close=True, width=None, height=None,
         plt.close()
 
     if verbose:
-        sys.stdout("Done\n")
+        sys.stdout.write("Done\n")
