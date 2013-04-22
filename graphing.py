@@ -56,7 +56,7 @@ def save(path, fignum=None, close=True, width=None, height=None,
     # infer the extension if ext is None
     if ext is None:
         basename, ex = os.path.splitext(basename)
-        ext = [ex]
+        ext = [ex[1:]]
 
     for ex in ext:
         # The final path to save to
