@@ -28,6 +28,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 import sys
 
@@ -103,3 +104,47 @@ def save(path, fignum=None, close=True, width=None, height=None,
 
     if verbose:
         sys.stdout.write("Done\n")
+
+
+def plot_to_array(fig=None):
+    """Convert a matplotlib figure `fig` to RGB pixels.
+
+    Note that this DOES include things like ticks, labels, title, etc.
+
+    Parameters
+    ----------
+    fig : int or matplotlib.figure.Figure (default=None)
+        A matplotlib figure or figure identifier. If None, the current
+        figure is used.
+
+    Returns
+    -------
+    out : numpy.ndarray
+        (width, height, 4) array of RGB values
+
+    """
+
+    # get the figure object
+    if fig is None:
+        fig = plt.gcf()
+    try:
+        fig = int(fig)
+    except TypeError:
+        pass
+    else:
+        fig = plt.figure(fig)
+
+    # render the figure
+    fig.canvas.draw()
+
+    # convert the figure to a rgb string, and read that buffer into a
+    # numpy array
+    w, h = fig.canvas.get_width_height()
+    buf = fig.canvas.renderer.tostring_rgb()
+    arr = np.fromstring(buf, dtype=np.uint8)
+    arr.resize(h, w, 3)
+
+    # convert values from 0-255 to 0-1
+    farr = arr / 255.
+
+    return farr
