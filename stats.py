@@ -109,9 +109,6 @@ def GP(K, x, y, xo):
     # round because we get floating point error around zero and end up
     # with negative variances along the diagonal
     cov = np.round(_cov, decimals=6)
-    try:
-        assert (np.diag(cov) >= 0).all()
-    except AssertionError:
-        print np.diag(cov)
+    assert (np.diag(cov) >= 0).all()
 
     return mean, cov
