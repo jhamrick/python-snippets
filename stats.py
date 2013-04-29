@@ -67,3 +67,51 @@ def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
     lognormconsts = np.sum(_lognormconsts, axis=axis)
 
     return lognormconsts, lognormarr
+
+
+def GP(K, x, y, xo):
+    """Compute the Gaussian Process mean and covariance at points `xo` of the
+    posterior distribution over f(xo), given observations `y` at points
+    `x`.
+
+    Parameters
+    ----------
+    K : function
+        Kernel function, which takes two vectors as input and returns
+        their inner product.
+    x : numpy.ndarray
+        Vector of input points
+    y : numpy.ndarray
+        Vector of input observations
+    xo : numpy.ndarray
+        Vector of inputs for which to estimate output mean/variance
+
+    Returns
+    -------
+    tuple : (yo_mean, yo_cov)
+        2-tuple of the mean and covariance for output points yo
+
+    """
+
+    # compute the various kernel matrices
+    Kxx = K(x, x)
+    Kxox = K(xo, x)
+    Kxxo = K(x, xo)
+    Kxoxo = K(xo, xo)
+
+    dot = np.dot
+    inv = np.linalg.inv
+
+    # estimate the mean and covariance of the function
+    mean = dot(dot(Kxox, inv(Kxx)), y)
+    _cov = Kxoxo - dot(dot(Kxox, inv(Kxx)), Kxxo)
+
+    # round because we get floating point error around zero and end up
+    # with negative variances along the diagonal
+    cov = np.round(_cov, decimals=6)
+    try:
+        assert (np.diag(cov) >= 0).all()
+    except AssertionError:
+        print np.diag(cov)
+
+    return mean, cov
