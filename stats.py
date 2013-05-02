@@ -27,6 +27,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import numpy as np
+from numba import jit
 
 
 def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
@@ -112,3 +113,89 @@ def GP(K, x, y, xo):
     assert (np.diag(cov) >= 0).all()
 
     return mean, cov
+
+
+def gaussian_kernel(h, w):
+    """Produces a JIT compiled Gaussian kernel function.
+
+    Parameters
+    ----------
+    h : number
+        Output scale kernel parameter
+    w : number
+        Input scale (Gaussian standard deviation) kernel parameter
+
+    Returns
+    -------
+    out : function
+        The kernel function takes two 1-d arrays and computes a
+        Gaussian kernel covariance matrix. It returns a 2-d array with
+        dimensions equal to the size of the input vectors.
+
+    """
+
+    @jit('f8[:,:](f8[:],f8[:])')
+    def K(x1, x2):
+        # compute constants to save on computation time
+        out = np.empty((x1.size, x2.size))
+        twopi = 2 * np.pi
+        c = np.log((h ** 2) / np.sqrt(twopi * w))
+
+        for i in xrange(x1.size):
+            for j in xrange(x2.size):
+                diff = x1[i] - x2[j]
+                # log gaussian kernel
+                out[i, j] = c + (-0.5 * (diff**2) / w**2)
+
+        # transform the output out of log space
+        out[:, :] = np.exp(out)
+
+        return out
+    return K
+
+
+def circular_gaussian_kernel(h, w):
+    """Produces a JIT compiled circular Gaussian kernel function.
+
+    Parameters
+    ----------
+    h : number
+        Output scale kernel parameter
+    w : number
+        Input scale (Gaussian standard deviation) kernel parameter
+
+    Returns
+    -------
+    out : function
+        The kernel function takes two 1-d arrays and computes a circular
+        Gaussian kernel covariance matrix. It returns a 2-d array with
+        dimensions equal to the size of the input vectors.
+
+    """
+
+    @jit('f8[:,:](f8[:],f8[:])')
+    def K(x1, x2):
+        # compute constants to save on computation time
+        out = np.empty((x1.size, x2.size))
+        twopi = 2 * np.pi
+        c = np.log((h ** 2) / np.sqrt(twopi * w))
+
+        for i in xrange(x1.size):
+            for j in xrange(x2.size):
+                # compute circular difference between the points --
+                # the idea being, if one is around 2*pi and the other
+                # is around 0, they are actually very close
+                d = x1[i] - x2[j]
+                if abs(d) > np.pi:
+                    diff = d - (np.sign(d) * twopi)
+                else:
+                    diff = d
+
+                # log gaussian kernel
+                out[i, j] = c + (-0.5 * (diff**2) / w**2)
+
+        # transform the output out of log space
+        out[:, :] = np.exp(out)
+
+        return out
+    return K
