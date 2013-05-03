@@ -69,6 +69,18 @@ def save(path, fignum=None, close=True, width=None, height=None,
 
     """
 
+    # get the figure
+    if fignum is not None:
+        fig = plt.figure(fignum)
+    else:
+        fig = plt.gcf()
+
+    # set its dimenions
+    if width:
+        fig.set_figwidth(width)
+    if height:
+        fig.set_figheight(height)
+
     # make sure we have a list of extensions
     if ext is not None and not hasattr(ext, '__iter__'):
         ext = [ext]
