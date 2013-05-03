@@ -149,8 +149,7 @@ def gaussian_kernel(h, w, jit=True):
     def K(x1, x2):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
-        twopi = 2 * np.pi
-        c = np.log((h ** 2) / np.sqrt(twopi * w))
+        c = np.log((h ** 2) / (np.sqrt(2 * np.pi) * w))
 
         for i in xrange(x1.size):
             for j in xrange(x2.size):
@@ -200,7 +199,7 @@ def circular_gaussian_kernel(h, w, jit=True):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
         twopi = 2 * np.pi
-        c = np.log((h ** 2) / np.sqrt(twopi * w))
+        c = np.log((h ** 2) / (np.sqrt(twopi) * w))
 
         for i in xrange(x1.size):
             for j in xrange(x2.size):
