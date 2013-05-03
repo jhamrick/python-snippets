@@ -68,7 +68,8 @@ def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
     # get maximum value of array
     maxlogarr = logarr.max(axis=axis).reshape(shape)
     # calculate how much to shift the array up by
-    shift = (max_log_value - maxlogarr - 2 - logarr.shape[axis])
+    shift = max_log_value - maxlogarr - 2 - logarr.shape[axis]
+    shift[shift < 0] = 0
     # shift the array
     unnormed = logarr + shift
     # convert from logspace
