@@ -66,7 +66,7 @@ def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
     shape = list(logarr.shape)
     shape[axis] = 1
     # get maximum value of array
-    maxlogarr = np.max(logarr, axis=axis).reshape(shape)
+    maxlogarr = logarr.max(axis=axis).reshape(shape)
     # calculate how much to shift the array up by
     shift = (max_log_value - maxlogarr - 2 - logarr.shape[axis])
     # shift the array
@@ -74,13 +74,13 @@ def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
     # convert from logspace
     arr = exp(unnormed)
     # calculate shifted log normalization constants
-    _lognormconsts = log(np.sum(arr, axis=axis)).reshape(shape)
+    _lognormconsts = log(arr.sum(axis=axis)).reshape(shape)
     # calculate normalized array
     lognormarr = unnormed - _lognormconsts
     # unshift normalization constants
     _lognormconsts -= shift
     # get rid of the dimension we normalized over
-    lognormconsts = np.sum(_lognormconsts, axis=axis)
+    lognormconsts = _lognormconsts.sum(axis=axis)
 
     return lognormconsts, lognormarr
 
