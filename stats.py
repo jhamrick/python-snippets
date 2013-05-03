@@ -30,7 +30,7 @@ import numpy as np
 import numba
 
 from numpy import pi
-from numpy import log, exp, sqrt, sign, dot, diag
+from numpy import log, exp, sqrt, sign, dot
 from numpy.linalg import inv
 
 
@@ -105,21 +105,18 @@ def GP(K, x, y, xo):
 
     # compute the various kernel matrices
     Kxx = K(x, x)
-    Kxox = K(xo, x)
-    Kxxo = K(x, xo)
     Kxoxo = K(xo, xo)
+    Kxxo = K(x, xo)
+    Kxox = K(xo, x)
 
     # estimate the mean and covariance of the function
-    inv_Kxx = inv(Kxx)
-    mean = dot(dot(Kxox, inv_Kxx), y)
-    _cov = Kxoxo - dot(dot(Kxox, inv_Kxx), Kxxo)
+    kik = dot(Kxox, inv(Kxx))
+    mean = dot(kik, y)
+    _cov = Kxoxo - dot(kik, Kxxo)
 
     # round because we get floating point error around zero and end up
     # with negative variances along the diagonal
     cov = np.round(_cov, decimals=6)
-    if not (diag(cov) >= 0).all():
-        raise np.linalg.LinAlgError(
-            "Negative diagonal covariance: %s" % diag(cov))
 
     return mean, cov
 
