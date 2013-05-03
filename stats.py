@@ -121,7 +121,7 @@ def GP(K, x, y, xo):
     return mean, cov
 
 
-def gaussian_kernel(h, w, jit=True):
+def gaussian_kernel(h, w, s, jit=True):
     """Produces a Gaussian kernel function.
 
     Parameters
@@ -130,6 +130,8 @@ def gaussian_kernel(h, w, jit=True):
         Output scale kernel parameter
     w : number
         Input scale (Gaussian standard deviation) kernel parameter
+    s : number
+        Observation noise scale
     jit : boolean (default=True)
         Whether JIT compile the function with numba
 
@@ -150,16 +152,16 @@ def gaussian_kernel(h, w, jit=True):
     def kernel(x1, x2):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
-        c = log((h ** 2) / (sqrt(2 * pi) * w))
+        c = log(h ** 2)
 
         for i in xrange(x1.size):
             for j in xrange(x2.size):
                 diff = x1[i] - x2[j]
                 # log gaussian kernel
-                out[i, j] = c + (-0.5 * (diff**2) / w**2)
-
-        # transform the output out of log space
-        out[:, :] = exp(out)
+                if abs(diff) < 1e-6:
+                    out[i, j] = exp(c) + (s ** 2)
+                else:
+                    out[i, j] = exp(c + (-0.5 * (diff ** 2) / (w ** 2)))
 
         return out
 
@@ -172,7 +174,7 @@ def gaussian_kernel(h, w, jit=True):
     return K
 
 
-def circular_gaussian_kernel(h, w, jit=True):
+def circular_gaussian_kernel(h, w, s, jit=True):
     """Produces a circular Gaussian kernel function.
 
     Parameters
@@ -181,6 +183,8 @@ def circular_gaussian_kernel(h, w, jit=True):
         Output scale kernel parameter
     w : number
         Input scale (Gaussian standard deviation) kernel parameter
+    s : number
+        Observation noise scale
     jit : boolean (default=True)
         Whether JIT compile the function with numba
 
@@ -202,7 +206,7 @@ def circular_gaussian_kernel(h, w, jit=True):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
         twopi = 2 * pi
-        c = log((h ** 2) / (sqrt(twopi) * w))
+        c = log(h ** 2)
 
         for i in xrange(x1.size):
             for j in xrange(x2.size):
@@ -216,10 +220,10 @@ def circular_gaussian_kernel(h, w, jit=True):
                     diff = d
 
                 # log gaussian kernel
-                out[i, j] = c + (-0.5 * (diff**2) / w**2)
-
-        # transform the output out of log space
-        out[:, :] = exp(out)
+                if abs(diff) < 1e-6:
+                    out[i, j] = exp(c) + (s ** 2)
+                else:
+                    out[i, j] = exp(c + (-0.5 * (diff ** 2) / (w ** 2)))
 
         return out
 
