@@ -92,6 +92,11 @@ def GP(K, x, y, xo):
     tuple : (yo_mean, yo_cov)
         2-tuple of the mean and covariance for output points yo
 
+    References
+    ----------
+    Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes
+        for machine learning. MIT Press.
+
     """
 
     # compute the various kernel matrices
@@ -133,6 +138,11 @@ def gaussian_kernel(h, w, jit=True):
         The kernel function takes two 1-d arrays and computes a
         Gaussian kernel covariance matrix. It returns a 2-d array with
         dimensions equal to the size of the input vectors.
+
+    References
+    ----------
+    Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes
+        for machine learning. MIT Press.
 
     """
 
@@ -178,6 +188,11 @@ def circular_gaussian_kernel(h, w, jit=True):
         The kernel function takes two 1-d arrays and computes a circular
         Gaussian kernel covariance matrix. It returns a 2-d array with
         dimensions equal to the size of the input vectors.
+
+    References
+    ----------
+    Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes
+        for machine learning. MIT Press.
 
     """
 
