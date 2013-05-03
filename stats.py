@@ -29,6 +29,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import numpy as np
 import numba
 
+from numpy import pi
+from numpy import log, exp, sqrt, sign, dot, diag
+from numpy.linalg import inv
+
 
 def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
     """Normalize an array of log-values.  Returns a tuple of
@@ -57,9 +61,9 @@ def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
     # shift the array
     unnormed = logarr + shift
     # convert from logspace
-    arr = np.exp(unnormed)
+    arr = exp(unnormed)
     # calculate shifted log normalization constants
-    _lognormconsts = np.log(np.sum(arr, axis=axis)).reshape(shape)
+    _lognormconsts = log(np.sum(arr, axis=axis)).reshape(shape)
     # calculate normalized array
     lognormarr = unnormed - _lognormconsts
     # unshift normalization constants
@@ -105,17 +109,17 @@ def GP(K, x, y, xo):
     Kxxo = K(x, xo)
     Kxoxo = K(xo, xo)
 
-    dot = np.dot
-    inv = np.linalg.inv
-
     # estimate the mean and covariance of the function
-    mean = dot(dot(Kxox, inv(Kxx)), y)
-    _cov = Kxoxo - dot(dot(Kxox, inv(Kxx)), Kxxo)
+    inv_Kxx = inv(Kxx)
+    mean = dot(dot(Kxox, inv_Kxx), y)
+    _cov = Kxoxo - dot(dot(Kxox, inv_Kxx), Kxxo)
 
     # round because we get floating point error around zero and end up
     # with negative variances along the diagonal
     cov = np.round(_cov, decimals=6)
-    assert (np.diag(cov) >= 0).all()
+    if not (diag(cov) >= 0).all():
+        raise np.linalg.LinAlgError(
+            "Negative diagonal covariance: %s" % diag(cov))
 
     return mean, cov
 
@@ -146,10 +150,10 @@ def gaussian_kernel(h, w, jit=True):
 
     """
 
-    def K(x1, x2):
+    def kernel(x1, x2):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
-        c = np.log((h ** 2) / (np.sqrt(2 * np.pi) * w))
+        c = log((h ** 2) / (sqrt(2 * pi) * w))
 
         for i in xrange(x1.size):
             for j in xrange(x2.size):
@@ -158,13 +162,15 @@ def gaussian_kernel(h, w, jit=True):
                 out[i, j] = c + (-0.5 * (diff**2) / w**2)
 
         # transform the output out of log space
-        out[:, :] = np.exp(out)
+        out[:, :] = exp(out)
 
         return out
 
     # JIT compile with numba
     if jit:
-        K = numba.jit('f8[:,:](f8[:],f8[:])')(K)
+        K = numba.jit('f8[:,:](f8[:],f8[:])')(kernel)
+    else:
+        K = kernel
 
     return K
 
@@ -195,11 +201,11 @@ def circular_gaussian_kernel(h, w, jit=True):
 
     """
 
-    def K(x1, x2):
+    def kernel(x1, x2):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
-        twopi = 2 * np.pi
-        c = np.log((h ** 2) / (np.sqrt(twopi) * w))
+        twopi = 2 * pi
+        c = log((h ** 2) / (sqrt(twopi) * w))
 
         for i in xrange(x1.size):
             for j in xrange(x2.size):
@@ -207,8 +213,8 @@ def circular_gaussian_kernel(h, w, jit=True):
                 # the idea being, if one is around 2*pi and the other
                 # is around 0, they are actually very close
                 d = x1[i] - x2[j]
-                if abs(d) > np.pi:
-                    diff = d - (np.sign(d) * twopi)
+                if abs(d) > pi:
+                    diff = d - (sign(d) * twopi)
                 else:
                     diff = d
 
@@ -216,12 +222,14 @@ def circular_gaussian_kernel(h, w, jit=True):
                 out[i, j] = c + (-0.5 * (diff**2) / w**2)
 
         # transform the output out of log space
-        out[:, :] = np.exp(out)
+        out[:, :] = exp(out)
 
         return out
 
     # JIT compile with numba
     if jit:
-        K = numba.jit('f8[:,:](f8[:],f8[:])')(K)
+        K = numba.jit('f8[:,:](f8[:],f8[:])')(kernel)
+    else:
+        K = kernel
 
     return K
