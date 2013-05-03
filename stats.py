@@ -27,7 +27,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import numpy as np
-from numba import jit
+import numba
 
 
 def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
@@ -115,8 +115,8 @@ def GP(K, x, y, xo):
     return mean, cov
 
 
-def gaussian_kernel(h, w):
-    """Produces a JIT compiled Gaussian kernel function.
+def gaussian_kernel(h, w, jit=True):
+    """Produces a Gaussian kernel function.
 
     Parameters
     ----------
@@ -124,6 +124,8 @@ def gaussian_kernel(h, w):
         Output scale kernel parameter
     w : number
         Input scale (Gaussian standard deviation) kernel parameter
+    jit : boolean (default=True)
+        Whether JIT compile the function with numba
 
     Returns
     -------
@@ -134,7 +136,6 @@ def gaussian_kernel(h, w):
 
     """
 
-    @jit('f8[:,:](f8[:],f8[:])')
     def K(x1, x2):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
@@ -151,11 +152,16 @@ def gaussian_kernel(h, w):
         out[:, :] = np.exp(out)
 
         return out
+
+    # JIT compile with numba
+    if jit:
+        K = numba.jit('f8[:,:](f8[:],f8[:])')(K)
+
     return K
 
 
-def circular_gaussian_kernel(h, w):
-    """Produces a JIT compiled circular Gaussian kernel function.
+def circular_gaussian_kernel(h, w, jit=True):
+    """Produces a circular Gaussian kernel function.
 
     Parameters
     ----------
@@ -163,6 +169,8 @@ def circular_gaussian_kernel(h, w):
         Output scale kernel parameter
     w : number
         Input scale (Gaussian standard deviation) kernel parameter
+    jit : boolean (default=True)
+        Whether JIT compile the function with numba
 
     Returns
     -------
@@ -173,7 +181,6 @@ def circular_gaussian_kernel(h, w):
 
     """
 
-    @jit('f8[:,:](f8[:],f8[:])')
     def K(x1, x2):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
@@ -198,4 +205,9 @@ def circular_gaussian_kernel(h, w):
         out[:, :] = np.exp(out)
 
         return out
+
+    # JIT compile with numba
+    if jit:
+        K = numba.jit('f8[:,:](f8[:],f8[:])')(K)
+
     return K
