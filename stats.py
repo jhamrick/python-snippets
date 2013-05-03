@@ -30,7 +30,7 @@ import numpy as np
 import numba
 
 from numpy import pi
-from numpy import log, exp, sqrt, sign, dot
+from numpy import log, exp, sign, dot
 from numpy.linalg import inv
 
 
