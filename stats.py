@@ -35,18 +35,29 @@ from numpy.linalg import inv
 
 
 def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
-    """Normalize an array of log-values.  Returns a tuple of
-    (normalization constants, normalized array), where both values are
-    again in logspace.
+    """Normalize an array of log-values.
+
+    This function is very useful if you have an array of log
+    probabilities that need to be normalized, but some of the
+    probabilies might be extremely small (i.e., underflow will occur if
+    you try to exponentiate them). This function computes the
+    normalization constants in log space, thus avoiding the need to
+    exponentiate the values.
 
     Parameters
+    ----------
+    logarr: numpy.ndarray
+        Array of log values
+    axis: integer (default=-1)
+        Axis over which to normalize
+    max_log_value: float (default=709.78271289338397)
+        Largest number that, when exponentiated, will not overflow
 
-    logarr: array of log values
-
-    axis: axis over which to normalize (default=-1)
-
-    max_log_value: largest number that, when exponentiated, will not
-    overflow
+    Returns
+    -------
+    out: (numpy.ndarray, numpy.ndarray)
+        2-tuple consisting of the log normalization constants used to
+        normalize the array, and the normalized array of log values
 
     """
 
