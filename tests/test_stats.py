@@ -64,13 +64,28 @@ def test_normalize_2x100000():
 # gaussian processes
 ######################################################################
 
-from stats import GP, gaussian_kernel, circular_gaussian_kernel
+from stats import GP, gaussian_kernel, periodic_kernel
 
 
-def check_kernel(x, dx, h, w):
+def check_gaussian_kernel(x, dx, h, w):
     pdx = scipy.stats.norm.pdf(dx, loc=0, scale=w)
     pdx *= (h ** 2) * np.sqrt(2 * np.pi) * w
     kernel = gaussian_kernel(h, w, jit=False)
+    K = kernel(x, x)
+
+    diff = abs(pdx - K)
+    if not (diff < 1e-8).all():
+        print pdx
+        print K
+        raise AssertionError("invalid kernel matrix")
+
+
+def check_periodic_kernel(x, dx, h, w):
+    cos_pdx = scipy.stats.norm.pdf(dx[0], loc=0, scale=w)
+    sin_pdx = scipy.stats.norm.pdf(dx[1], loc=0, scale=w)
+    pdx = cos_pdx * sin_pdx
+    pdx *= (h ** 2) * (np.sqrt(2 * np.pi) * w) ** 2
+    kernel = periodic_kernel(h, w, jit=False)
     K = kernel(x, x)
 
     diff = abs(pdx - K)
@@ -102,4 +117,30 @@ def test_gaussian_kernel():
     dx = x[:, None] - x[None, :]
     for i in xrange(10):
         h, w = np.random.gamma(2, scale=2, size=2)
-        yield (check_kernel, x, dx, h, w)
+        yield (check_gaussian_kernel, x, dx, h, w)
+
+
+@raises(ValueError)
+def test_periodic_kernel_params1():
+    """Test invalid h parameter to stats.periodic_kernel"""
+    periodic_kernel(0, 1, False)
+
+
+@raises(ValueError)
+def test_periodic_kernel_params2():
+    """Test invalid w parameter to stats.periodic_kernel"""
+    periodic_kernel(1, 0, False)
+
+
+# def test_periodic_kernel_jit():
+#     periodic_kernel(1, 1, True)
+
+
+def test_periodic_kernel():
+    """Test stats.periodic_kernel output matrix"""
+    x = np.linspace(-2*np.pi, 2*np.pi, 16)
+    u = np.array([np.cos(x), np.sin(x)])
+    dx = u[:, :, None] - u[:, None, :]
+    for i in xrange(10):
+        h, w = np.random.gamma(2, scale=2, size=2)
+        yield (check_periodic_kernel, x, dx, h, w)
