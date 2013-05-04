@@ -136,7 +136,10 @@ def GP(K, x, y, xo, s=0):
 
 
 def gaussian_kernel(h, w, jit=True):
-    """Produces a Gaussian kernel function.
+    """Produces a squared exponential (Gaussian) kernel function of
+    the form:
+
+    k(x_1, x_2) = h^2\exp(-\frac{(x_1-x_2)^2}{2w^2})
 
     Parameters
     ----------
@@ -171,14 +174,11 @@ def gaussian_kernel(h, w, jit=True):
     c = log(h ** 2)
 
     def kernel(x1, x2):
-        # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
-
         for i in xrange(x1.size):
             for j in xrange(x2.size):
                 diff = x1[i] - x2[j]
                 out[i, j] = exp(c + (-0.5 * (diff ** 2) / (w ** 2)))
-
         return out
 
     # JIT compile with numba
@@ -190,8 +190,10 @@ def gaussian_kernel(h, w, jit=True):
     return K
 
 
-def circular_gaussian_kernel(h, w, jit=True):
-    """Produces a circular Gaussian kernel function.
+def periodic_kernel(h, w, jit=True):
+    """Produces a periodic kernel function, of the form:
+
+    k(x_1, x_2) = h^2\exp(-\frac{2\sin^2(\frac{x_1-x_2}{2})}{w^2})
 
     Parameters
     ----------
@@ -216,26 +218,20 @@ def circular_gaussian_kernel(h, w, jit=True):
 
     """
 
+    # parameter checking
+    if h <= 0:
+        raise ValueError("invalid value for h: %s" % h)
+    if w <= 0:
+        raise ValueError("invalid value for w: %s" % w)
+
     def kernel(x1, x2):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
-        twopi = 2 * pi
         c = log(h ** 2)
-
         for i in xrange(x1.size):
             for j in xrange(x2.size):
-                # compute circular difference between the points --
-                # the idea being, if one is around 2*pi and the other
-                # is around 0, they are actually very close
-                d = x1[i] - x2[j]
-                if abs(d) > pi:
-                    diff = d - (sign(d) * twopi)
-                else:
-                    diff = d
-
-                # log gaussian kernel
-                out[i, j] = exp(c + (-0.5 * (diff ** 2) / (w ** 2)))
-
+                diff = x1[i] - x2[j]
+                out[i, j] = exp(c + (-2 * (np.sin(diff / 2.) ** 2) / (w ** 2)))
         return out
 
     # JIT compile with numba
