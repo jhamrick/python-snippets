@@ -1,5 +1,12 @@
+from nose.tools import raises
+
 import numpy as np
+import scipy.stats
 np.seterr(all='raise')
+
+######################################################################
+# normalize
+######################################################################
 
 from stats import normalize
 
@@ -51,3 +58,39 @@ def test_normalize_2x100000():
         for axis in xrange(2):
             yield (check_normalization_constants, arr, axis)
             yield (check_normalization, arr, axis)
+
+
+######################################################################
+# gaussian processes
+######################################################################
+
+from stats import GP, gaussian_kernel, circular_gaussian_kernel
+
+
+@raises(ValueError)
+def test_gaussian_kernel_params1():
+    gaussian_kernel(0, 1, False)
+
+
+@raises(ValueError)
+def test_gaussian_kernel_params2():
+    gaussian_kernel(1, 0, False)
+
+
+# def test_gaussian_kernel_jit():
+#     gaussian_kernel(1, 1, True)
+
+
+def test_gaussian_kernel():
+    x = np.linspace(-2, 2, 10)
+    dx = x[:, None] - x[None, :]
+    pdx = scipy.stats.norm.pdf(dx, loc=0, scale=1)
+    pdx *= np.sqrt(2 * np.pi)
+    kernel = gaussian_kernel(1, 1, jit=False)
+    K = kernel(x, x)
+
+    diff = abs(pdx - K)
+    if not (diff < 1e-8).all():
+        print pdx
+        print K
+        raise AssertionError("invalid kernel matrix")
