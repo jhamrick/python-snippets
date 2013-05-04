@@ -67,13 +67,28 @@ def test_normalize_2x100000():
 from stats import GP, gaussian_kernel, circular_gaussian_kernel
 
 
+def check_kernel(x, dx, h, w):
+    pdx = scipy.stats.norm.pdf(dx, loc=0, scale=w)
+    pdx *= (h ** 2) * np.sqrt(2 * np.pi) * w
+    kernel = gaussian_kernel(h, w, jit=False)
+    K = kernel(x, x)
+
+    diff = abs(pdx - K)
+    if not (diff < 1e-8).all():
+        print pdx
+        print K
+        raise AssertionError("invalid kernel matrix")
+
+
 @raises(ValueError)
 def test_gaussian_kernel_params1():
+    """Test invalid h parameter to stats.gaussian_kernel"""
     gaussian_kernel(0, 1, False)
 
 
 @raises(ValueError)
 def test_gaussian_kernel_params2():
+    """Test invalid w parameter to stats.gaussian_kernel"""
     gaussian_kernel(1, 0, False)
 
 
@@ -82,15 +97,9 @@ def test_gaussian_kernel_params2():
 
 
 def test_gaussian_kernel():
+    """Test stats.gaussian_kernel output matrix"""
     x = np.linspace(-2, 2, 10)
     dx = x[:, None] - x[None, :]
-    pdx = scipy.stats.norm.pdf(dx, loc=0, scale=1)
-    pdx *= np.sqrt(2 * np.pi)
-    kernel = gaussian_kernel(1, 1, jit=False)
-    K = kernel(x, x)
-
-    diff = abs(pdx - K)
-    if not (diff < 1e-8).all():
-        print pdx
-        print K
-        raise AssertionError("invalid kernel matrix")
+    for i in xrange(10):
+        h, w = np.random.gamma(2, scale=2, size=2)
+        yield (check_kernel, x, dx, h, w)

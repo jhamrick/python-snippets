@@ -169,7 +169,6 @@ def gaussian_kernel(h, w, jit=True):
 
     # compute constants
     c = log(h ** 2)
-    ec = exp(c)
 
     def kernel(x1, x2):
         # compute constants to save on computation time
