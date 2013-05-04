@@ -122,14 +122,14 @@ def GP(K, x, y, xo, s=0):
     Kxxo = K(x, xo)
     Kxox = K(xo, x)
 
-    # estimate the mean and covariance of the function
-    kik = dot(Kxox, inv(Kxx))
-    mean = dot(kik, y)
-    _cov = Kxoxo - dot(kik, Kxxo)
+    # compute cholesky factorization of Kxx for faster inversion
+    L = np.linalg.cholesky(Kxx)
+    Li = inv(L)
+    alpha = dot(inv(L.T), dot(Li, y))
 
-    # round because we get floating point error around zero and end up
-    # with negative variances along the diagonal
-    cov = np.round(_cov, decimals=6)
+    # estimate the mean and covariance of the function
+    mean = dot(Kxox, alpha)
+    cov = np.round(Kxoxo - dot(Li, Kxxo), decimals=6)
 
     return mean, cov
 
