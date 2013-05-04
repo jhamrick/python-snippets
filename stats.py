@@ -116,8 +116,14 @@ def GP(K, x, y, xo, s=0):
 
     """
 
+    # parameter checking
+    if s < 0:
+        raise ValueError("invalid value for s: %s" % s)
+
     # compute the various kernel matrices
-    Kxx = K(x, x) + (np.eye(x.size) * s)
+    Kxx = K(x, x)
+    if s > 0:
+        Kxx += np.eye(x.size) * s
     Kxoxo = K(xo, xo)
     Kxxo = K(x, xo)
     Kxox = K(xo, x)
