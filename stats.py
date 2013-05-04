@@ -29,8 +29,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import numpy as np
 import numba
 
-from numpy import pi
-from numpy import log, exp, sqrt, sign, dot
+from numpy import log, exp, dot
 from numpy.linalg import inv
 
 
