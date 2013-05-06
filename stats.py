@@ -90,6 +90,12 @@ def GP(K, x, y, xo, s=0):
     posterior distribution over f(xo), given observations `y` at points
     `x`.
 
+    The parameter `s` refers to observation noise, i.e.
+
+    $$K_y = K_f + s^2\delta(x_1-x_2),$$
+
+    where $\delta$ is the Dirac delta function.
+
     Parameters
     ----------
     K : function
@@ -102,7 +108,7 @@ def GP(K, x, y, xo, s=0):
     xo : numpy.ndarray
         Vector of inputs for which to estimate output mean/variance
     s : number (default=0)
-        Variance of noisy observations
+        Observation noise parameter
 
     Returns
     -------
@@ -144,7 +150,7 @@ def gaussian_kernel(h, w, jit=True):
     """Produces a squared exponential (Gaussian) kernel function of
     the form:
 
-    k(x_1, x_2) = h^2\exp(-\frac{(x_1-x_2)^2}{2w^2})
+    $$k(x_1, x_2) = h^2\exp(-\frac{(x_1-x_2)^2}{2w^2})$$
 
     Parameters
     ----------
@@ -214,7 +220,7 @@ def gaussian_kernel(h, w, jit=True):
 def periodic_kernel(h, w, jit=True):
     """Produces a periodic kernel function, of the form:
 
-    k(x_1, x_2) = h^2\exp(-\frac{2\sin^2(\frac{x_1-x_2}{2})}{w^2})
+    $$k(x_1, x_2) = h^2\exp(-\frac{2\sin^2(\frac{x_1-x_2}{2})}{w^2})$$
 
     Parameters
     ----------
