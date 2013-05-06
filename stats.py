@@ -123,7 +123,7 @@ def GP(K, x, y, xo, s=0):
     # compute the various kernel matrices
     Kxx = K(x, x)
     if s > 0:
-        Kxx += np.eye(x.size) * s
+        Kxx += np.eye(x.size) * (s ** 2)
 
     # compute cholesky factorization of Kxx for faster inversion
     Li = inv(np.linalg.cholesky(Kxx))
