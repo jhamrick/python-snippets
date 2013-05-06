@@ -126,9 +126,8 @@ def GP(K, x, y, xo, s=0):
         Kxx += np.eye(x.size) * s
 
     # compute cholesky factorization of Kxx for faster inversion
-    L = np.linalg.cholesky(Kxx)
-    Li = inv(L)
-    alpha = dot(inv(L.T), dot(Li, y))
+    Li = inv(np.linalg.cholesky(Kxx))
+    alpha = dot(Li.T, dot(Li, y))
 
     Kxoxo = K(xo, xo)
     Kxxo = K(x, xo)
