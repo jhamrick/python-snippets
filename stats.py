@@ -194,14 +194,15 @@ def gaussian_kernel(h, w, jit=True):
                 diff = x1[i] - x2[j]
                 l = c + (-0.5 * (diff ** 2) / (w ** 2))
 
-                # underflow protection
-                try:
+                # !!! underflow protection hack, because numba
+                # currently can't handle catching/raising exceptions
+                if l < -709.78271289338397:
+                    out[i, j] = 0
+                elif l > 709.78271289338397:
+                    out[i, j] = np.inf
+                else:
                     out[i, j] = exp(l)
-                except FloatingPointError:
-                    if l < 0:
-                        out[i, j] = 0
-                    else:
-                        raise
+
         return out
 
     # save kernel parameters
@@ -266,14 +267,15 @@ def periodic_kernel(h, w, jit=True):
                 diff = x1[i] - x2[j]
                 l = c1 + (c2 * np.sin(diff / 2.) ** 2)
 
-                # underflow protection
-                try:
+                # !!! underflow protection hack, because numba
+                # currently can't handle catching/raising exceptions
+                if l < -709.78271289338397:
+                    out[i, j] = 0
+                elif l > 709.78271289338397:
+                    out[i, j] = np.inf
+                else:
                     out[i, j] = exp(l)
-                except FloatingPointError:
-                    if l < 0:
-                        out[i, j] = 0
-                    else:
-                        raise
+
         return out
 
     # save kernel parameters
