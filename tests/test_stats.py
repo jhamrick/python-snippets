@@ -16,7 +16,7 @@ def check_normalization_constants(arr, axis):
     z = normalize(np.log(arr), axis=axis)[0]
 
     zdiff = np.abs(sum - z)
-    if not (zdiff < 1e-8).all():
+    if not (zdiff < 1e-6).all():
         print sum
         print z
         raise AssertionError("wrong normalization constant")
@@ -28,7 +28,7 @@ def check_normalization(arr, axis):
     n = normalize(np.log(arr), axis=axis)[1]
 
     ndiff = np.abs(norm - n)
-    if not(ndiff < 1e-8).all():
+    if not(ndiff < 1e-6).all():
         print norm
         print n
         raise AssertionError("wrong normalized values")
@@ -74,7 +74,7 @@ def check_gaussian_kernel(x, dx, h, w):
     K = kernel(x, x)
 
     diff = abs(pdx - K)
-    if not (diff < 1e-8).all():
+    if not (diff < 1e-6).all():
         print pdx
         print K
         raise AssertionError("invalid kernel matrix")
@@ -89,7 +89,7 @@ def check_periodic_kernel(x, dx, h, w):
     K = kernel(x, x)
 
     diff = abs(pdx - K)
-    if not (diff < 1e-8).all():
+    if not (diff < 1e-6).all():
         print pdx
         print K
         raise AssertionError("invalid kernel matrix")
@@ -144,3 +144,44 @@ def test_periodic_kernel():
     for i in xrange(10):
         h, w = np.random.gamma(2, scale=2, size=2)
         yield (check_periodic_kernel, x, dx, h, w)
+
+
+def check_GP(kernel, x, y, s):
+    print kernel.h, kernel.w
+    mean, cov = GP(kernel, x, y, x, s=s)
+    diff = abs(y - mean)
+    if not (diff < 1e-6).all():
+        print y
+        print mean
+        print diff
+        raise AssertionError("incorrect GP predictions")
+
+
+def test_gaussian_GP():
+    x = np.linspace(-2*np.pi, 2*np.pi, 16)
+    y = np.sin(x)
+    for i in xrange(10):
+        h = np.random.gamma(2, scale=2)
+        w = np.random.gamma(1, scale=2)
+        # don't let w get too big, or we'll get a singular matrix
+        # (why??)
+        if w > np.pi:
+            w = np.pi
+        kernel = gaussian_kernel(h, w, jit=False)
+        yield (check_GP, kernel, x, y, 0)
+
+
+def test_periodic_GP():
+    # can't do -2*pi to 2*pi because they are the same -- the
+    # resulting covariance matrix will be singular!
+    x = np.linspace(-2*np.pi, 2*np.pi-np.radians(1), 16)
+    y = np.sin(x)
+    for i in xrange(10):
+        h = np.random.gamma(2, scale=2)
+        w = np.random.gamma(1, scale=2)
+        # don't let w get too big, or we'll get a singular matrix
+        # (why??)
+        if w > np.pi / 2.:
+            w = np.pi / 2.
+        kernel = periodic_kernel(h, w, jit=False)
+        yield (check_GP, kernel, x, y, 0)
