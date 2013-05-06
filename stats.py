@@ -124,18 +124,19 @@ def GP(K, x, y, xo, s=0):
     Kxx = K(x, x)
     if s > 0:
         Kxx += np.eye(x.size) * s
-    Kxoxo = K(xo, xo)
-    Kxxo = K(x, xo)
-    Kxox = K(xo, x)
 
     # compute cholesky factorization of Kxx for faster inversion
     L = np.linalg.cholesky(Kxx)
     Li = inv(L)
     alpha = dot(inv(L.T), dot(Li, y))
 
+    Kxoxo = K(xo, xo)
+    Kxxo = K(x, xo)
+    v = dot(Li, Kxxo)
+
     # estimate the mean and covariance of the function
-    mean = dot(Kxox, alpha)
-    cov = np.round(Kxoxo - dot(Li, Kxxo), decimals=6)
+    mean = dot(Kxxo.T, alpha)
+    cov = Kxoxo - dot(v.T, v)
 
     return mean, cov
 
