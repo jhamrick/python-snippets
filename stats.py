@@ -29,24 +29,34 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import numpy as np
 import numba
 
-from numpy import pi
-from numpy import log, exp, sign, dot
+from numpy import log, exp, dot
 from numpy.linalg import inv
 
 
 def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
-    """Normalize an array of log-values.  Returns a tuple of
-    (normalization constants, normalized array), where both values are
-    again in logspace.
+    """Normalize an array of log-values.
+
+    This function is very useful if you have an array of log
+    probabilities that need to be normalized, but some of the
+    probabilies might be extremely small (i.e., underflow will occur if
+    you try to exponentiate them). This function computes the
+    normalization constants in log space, thus avoiding the need to
+    exponentiate the values.
 
     Parameters
+    ----------
+    logarr: numpy.ndarray
+        Array of log values
+    axis: integer (default=-1)
+        Axis over which to normalize
+    max_log_value: float (default=709.78271289338397)
+        Largest number that, when exponentiated, will not overflow
 
-    logarr: array of log values
-
-    axis: axis over which to normalize (default=-1)
-
-    max_log_value: largest number that, when exponentiated, will not
-    overflow
+    Returns
+    -------
+    out: (numpy.ndarray, numpy.ndarray)
+        2-tuple consisting of the log normalization constants used to
+        normalize the array, and the normalized array of log values
 
     """
 
@@ -55,26 +65,27 @@ def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
     shape = list(logarr.shape)
     shape[axis] = 1
     # get maximum value of array
-    maxlogarr = np.max(logarr, axis=axis).reshape(shape)
+    maxlogarr = logarr.max(axis=axis).reshape(shape)
     # calculate how much to shift the array up by
-    shift = (max_log_value - maxlogarr - 2 - logarr.shape[axis])
+    shift = max_log_value - maxlogarr - 2 - logarr.shape[axis]
+    shift[shift < 0] = 0
     # shift the array
     unnormed = logarr + shift
     # convert from logspace
     arr = exp(unnormed)
     # calculate shifted log normalization constants
-    _lognormconsts = log(np.sum(arr, axis=axis)).reshape(shape)
+    _lognormconsts = log(arr.sum(axis=axis)).reshape(shape)
     # calculate normalized array
     lognormarr = unnormed - _lognormconsts
     # unshift normalization constants
     _lognormconsts -= shift
     # get rid of the dimension we normalized over
-    lognormconsts = np.sum(_lognormconsts, axis=axis)
+    lognormconsts = _lognormconsts.sum(axis=axis)
 
     return lognormconsts, lognormarr
 
 
-def GP(K, x, y, xo):
+def GP(K, x, y, xo, s=0):
     """Compute the Gaussian Process mean and covariance at points `xo` of the
     posterior distribution over f(xo), given observations `y` at points
     `x`.
@@ -90,6 +101,8 @@ def GP(K, x, y, xo):
         Vector of input observations
     xo : numpy.ndarray
         Vector of inputs for which to estimate output mean/variance
+    s : number (default=0)
+        Variance of noisy observations
 
     Returns
     -------
@@ -103,26 +116,36 @@ def GP(K, x, y, xo):
 
     """
 
+    # parameter checking
+    if s < 0:
+        raise ValueError("invalid value for s: %s" % s)
+
     # compute the various kernel matrices
     Kxx = K(x, x)
+    if s > 0:
+        Kxx += np.eye(x.size) * s
+
+    # compute cholesky factorization of Kxx for faster inversion
+    L = np.linalg.cholesky(Kxx)
+    Li = inv(L)
+    alpha = dot(inv(L.T), dot(Li, y))
+
     Kxoxo = K(xo, xo)
     Kxxo = K(x, xo)
-    Kxox = K(xo, x)
+    v = dot(Li, Kxxo)
 
     # estimate the mean and covariance of the function
-    kik = dot(Kxox, inv(Kxx))
-    mean = dot(kik, y)
-    _cov = Kxoxo - dot(kik, Kxxo)
-
-    # round because we get floating point error around zero and end up
-    # with negative variances along the diagonal
-    cov = np.round(_cov, decimals=6)
+    mean = dot(Kxxo.T, alpha)
+    cov = Kxoxo - dot(v.T, v)
 
     return mean, cov
 
 
-def gaussian_kernel(h, w, s, jit=True):
-    """Produces a Gaussian kernel function.
+def gaussian_kernel(h, w, jit=True):
+    """Produces a squared exponential (Gaussian) kernel function of
+    the form:
+
+    k(x_1, x_2) = h^2\exp(-\frac{(x_1-x_2)^2}{2w^2})
 
     Parameters
     ----------
@@ -130,8 +153,6 @@ def gaussian_kernel(h, w, s, jit=True):
         Output scale kernel parameter
     w : number
         Input scale (Gaussian standard deviation) kernel parameter
-    s : number
-        Observation noise scale
     jit : boolean (default=True)
         Whether JIT compile the function with numba
 
@@ -142,6 +163,9 @@ def gaussian_kernel(h, w, s, jit=True):
         Gaussian kernel covariance matrix. It returns a 2-d array with
         dimensions equal to the size of the input vectors.
 
+        This function will also have attributes corresponding to the
+        parameters, i.e. `out.h` and `out.w`.
+
     References
     ----------
     Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes
@@ -149,21 +173,35 @@ def gaussian_kernel(h, w, s, jit=True):
 
     """
 
-    def kernel(x1, x2):
-        # compute constants to save on computation time
-        out = np.empty((x1.size, x2.size))
-        c = log(h ** 2)
+    # parameter checking
+    if h <= 0:
+        raise ValueError("invalid value for h: %s" % h)
+    if w <= 0:
+        raise ValueError("invalid value for w: %s" % w)
 
+    # compute constants
+    c = log(h ** 2)
+
+    def kernel(x1, x2):
+        out = np.empty((x1.size, x2.size))
         for i in xrange(x1.size):
             for j in xrange(x2.size):
                 diff = x1[i] - x2[j]
-                # log gaussian kernel
-                if abs(diff) < 1e-6:
-                    out[i, j] = exp(c) + (s ** 2)
-                else:
-                    out[i, j] = exp(c + (-0.5 * (diff ** 2) / (w ** 2)))
+                l = c + (-0.5 * (diff ** 2) / (w ** 2))
 
+                # underflow protection
+                try:
+                    out[i, j] = exp(l)
+                except FloatingPointError:
+                    if l < 0:
+                        out[i, j] = 0
+                    else:
+                        raise
         return out
+
+    # save kernel parameters
+    kernel.h = h
+    kernel.w = w
 
     # JIT compile with numba
     if jit:
@@ -174,8 +212,10 @@ def gaussian_kernel(h, w, s, jit=True):
     return K
 
 
-def circular_gaussian_kernel(h, w, s, jit=True):
-    """Produces a circular Gaussian kernel function.
+def periodic_kernel(h, w, jit=True):
+    """Produces a periodic kernel function, of the form:
+
+    k(x_1, x_2) = h^2\exp(-\frac{2\sin^2(\frac{x_1-x_2}{2})}{w^2})
 
     Parameters
     ----------
@@ -183,8 +223,6 @@ def circular_gaussian_kernel(h, w, s, jit=True):
         Output scale kernel parameter
     w : number
         Input scale (Gaussian standard deviation) kernel parameter
-    s : number
-        Observation noise scale
     jit : boolean (default=True)
         Whether JIT compile the function with numba
 
@@ -195,6 +233,9 @@ def circular_gaussian_kernel(h, w, s, jit=True):
         Gaussian kernel covariance matrix. It returns a 2-d array with
         dimensions equal to the size of the input vectors.
 
+        This function will also have attributes corresponding to the
+        parameters, i.e. `out.h` and `out.w`.
+
     References
     ----------
     Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes
@@ -202,30 +243,37 @@ def circular_gaussian_kernel(h, w, s, jit=True):
 
     """
 
+    # parameter checking
+    if h <= 0:
+        raise ValueError("invalid value for h: %s" % h)
+    if w <= 0:
+        raise ValueError("invalid value for w: %s" % w)
+
+    # compute constants
+    c1 = log(h ** 2)
+    c2 = -2. / (w ** 2)
+
     def kernel(x1, x2):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
-        twopi = 2 * pi
-        c = log(h ** 2)
-
         for i in xrange(x1.size):
             for j in xrange(x2.size):
-                # compute circular difference between the points --
-                # the idea being, if one is around 2*pi and the other
-                # is around 0, they are actually very close
-                d = x1[i] - x2[j]
-                if abs(d) > pi:
-                    diff = d - (sign(d) * twopi)
-                else:
-                    diff = d
+                diff = x1[i] - x2[j]
+                l = c1 + (c2 * np.sin(diff / 2.) ** 2)
 
-                # log gaussian kernel
-                if abs(diff) < 1e-6:
-                    out[i, j] = exp(c) + (s ** 2)
-                else:
-                    out[i, j] = exp(c + (-0.5 * (diff ** 2) / (w ** 2)))
-
+                # underflow protection
+                try:
+                    out[i, j] = exp(l)
+                except FloatingPointError:
+                    if l < 0:
+                        out[i, j] = 0
+                    else:
+                        raise
         return out
+
+    # save kernel parameters
+    kernel.h = h
+    kernel.w = w
 
     # JIT compile with numba
     if jit:
