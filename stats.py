@@ -163,6 +163,9 @@ def gaussian_kernel(h, w, jit=True):
         Gaussian kernel covariance matrix. It returns a 2-d array with
         dimensions equal to the size of the input vectors.
 
+        This function will also have attributes corresponding to the
+        parameters, i.e. `out.h` and `out.w`.
+
     References
     ----------
     Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes
@@ -184,8 +187,21 @@ def gaussian_kernel(h, w, jit=True):
         for i in xrange(x1.size):
             for j in xrange(x2.size):
                 diff = x1[i] - x2[j]
-                out[i, j] = exp(c + (-0.5 * (diff ** 2) / (w ** 2)))
+                l = c + (-0.5 * (diff ** 2) / (w ** 2))
+
+                # underflow protection
+                try:
+                    out[i, j] = exp(l)
+                except FloatingPointError:
+                    if l < 0:
+                        out[i, j] = 0
+                    else:
+                        raise
         return out
+
+    # save kernel parameters
+    kernel.h = h
+    kernel.w = w
 
     # JIT compile with numba
     if jit:
@@ -217,6 +233,9 @@ def periodic_kernel(h, w, jit=True):
         Gaussian kernel covariance matrix. It returns a 2-d array with
         dimensions equal to the size of the input vectors.
 
+        This function will also have attributes corresponding to the
+        parameters, i.e. `out.h` and `out.w`.
+
     References
     ----------
     Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes
@@ -230,15 +249,31 @@ def periodic_kernel(h, w, jit=True):
     if w <= 0:
         raise ValueError("invalid value for w: %s" % w)
 
+    # compute constants
+    c1 = log(h ** 2)
+    c2 = -2. / (w ** 2)
+
     def kernel(x1, x2):
         # compute constants to save on computation time
         out = np.empty((x1.size, x2.size))
-        c = log(h ** 2)
         for i in xrange(x1.size):
             for j in xrange(x2.size):
                 diff = x1[i] - x2[j]
-                out[i, j] = exp(c + (-2 * (np.sin(diff / 2.) ** 2) / (w ** 2)))
+                l = c1 + (c2 * np.sin(diff / 2.) ** 2)
+
+                # underflow protection
+                try:
+                    out[i, j] = exp(l)
+                except FloatingPointError:
+                    if l < 0:
+                        out[i, j] = 0
+                    else:
+                        raise
         return out
+
+    # save kernel parameters
+    kernel.h = h
+    kernel.w = w
 
     # JIT compile with numba
     if jit:
