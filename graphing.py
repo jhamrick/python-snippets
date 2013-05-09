@@ -160,3 +160,223 @@ def plot_to_array(fig=None):
     farr = arr / 255.
 
     return farr
+
+
+def clear_top(ax=None):
+    """Remove the top edge of the axis bounding box.
+
+    Parameters
+    ----------
+    ax : axis object (default=pyplot.gca())
+
+    References
+    ----------
+    http://matplotlib.org/examples/pylab_examples/spine_placement_demo.html
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.spines['top'].set_color('none')
+    ax.xaxis.set_ticks_position('bottom')
+
+
+def clear_bottom(ax=None):
+    """Remove the bottom edge of the axis bounding box.
+
+    Parameters
+    ----------
+    ax : axis object (default=pyplot.gca())
+
+    References
+    ----------
+    http://matplotlib.org/examples/pylab_examples/spine_placement_demo.html
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.spines['bottom'].set_color('none')
+    ax.xaxis.set_ticks_position('top')
+
+
+def clear_top_bottom(ax=None):
+    """Remove the top and bottom edges of the axis bounding box.
+
+    Parameters
+    ----------
+    ax : axis object (default=pyplot.gca())
+
+    References
+    ----------
+    http://matplotlib.org/examples/pylab_examples/spine_placement_demo.html
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.spines['top'].set_color('none')
+    ax.spines['bottom'].set_color('none')
+    ax.xaxis.set_ticks([])
+
+
+def clear_left(ax=None):
+    """Remove the left edge of the axis bounding box.
+
+    Parameters
+    ----------
+    ax : axis object (default=pyplot.gca())
+
+    References
+    ----------
+    http://matplotlib.org/examples/pylab_examples/spine_placement_demo.html
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.spines['left'].set_color('none')
+    ax.yaxis.set_ticks_position('right')
+
+
+def clear_right(ax=None):
+    """Remove the right edge of the axis bounding box.
+
+    Parameters
+    ----------
+    ax : axis object (default=pyplot.gca())
+
+    References
+    ----------
+    http://matplotlib.org/examples/pylab_examples/spine_placement_demo.html
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.spines['right'].set_color('none')
+    ax.yaxis.set_ticks_position('left')
+
+
+def clear_left_right(ax=None):
+    """Remove the left and right edges of the axis bounding box.
+
+    Parameters
+    ----------
+    ax : axis object (default=pyplot.gca())
+
+    References
+    ----------
+    http://matplotlib.org/examples/pylab_examples/spine_placement_demo.html
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.spines['left'].set_color('none')
+    ax.spines['right'].set_color('none')
+    ax.yaxis.set_ticks([])
+
+
+def outward_ticks(ax=None, axis='both'):
+    """Make axis ticks face outwards rather than inwards (which is the
+    default).
+
+    Parameters
+    ----------
+    ax : axis object (default=pyplot.gca())
+    axis : string (default='both')
+        The axis (either 'x', 'y', or 'both') for which to set the tick
+        direction.
+
+    """
+
+    if ax is None:
+        ax = plt.gca()
+    if axis == 'both':
+        ax.tick_params(direction='out')
+    else:
+        ax.tick_params(axis=axis, direction='out')
+
+
+def set_xlabel_coords(y, x=0.5, ax=None):
+    """Set the y-coordinate (and optionally the x-coordinate) of the x-axis
+    label.
+
+    Parameters
+    ----------
+    y : float
+        y-coordinate for the label
+    x : float (default=0.5)
+        x-coordinate for the label
+    ax : axis object (default=pyplot.gca())
+
+    References
+    ----------
+    http://matplotlib.org/faq/howto_faq.html#align-my-ylabels-across-multiple-subplots
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.xaxis.set_label_coords(x, y)
+
+
+def set_ylabel_coords(x, y=0.5, ax=None):
+    """Set the x-coordinate (and optionally the y-coordinate) of the y-axis
+    label.
+
+    Parameters
+    ----------
+    x : float
+        x-coordinate for the label
+    y : float (default=0.5)
+        y-coordinate for the label
+    ax : axis object (default=pyplot.gca())
+
+    References
+    ----------
+    http://matplotlib.org/faq/howto_faq.html#align-my-ylabels-across-multiple-subplots
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.yaxis.set_label_coords(x, y)
+
+
+def no_xticklabels(ax=None):
+    """Remove the tick labels on the x-axis (but leave the tick marks).
+
+    Parameters
+    ----------
+    ax : axis object (default=pyplot.gca())
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.set_xticklabels([])
+
+
+def no_yticklabels(ax=None):
+    """Remove the tick labels on the y-axis (but leave the tick marks).
+
+    Parameters
+    ----------
+    ax : axis object (default=pyplot.gca())
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    ax.set_yticklabels([])
+
+
+def set_figsize(width, height, fig=None):
+    """Set the figure width and height.
+
+    Parameters
+    ----------
+    width : float
+        Figure width
+    height : float
+        Figure height
+    fig : figure object (default=pyplot.gcf())
+
+    """
+
+    if fig is None:
+        fig = plt.gcf()
+    fig.set_figwidth(width)
+    fig.set_figheight(height)
