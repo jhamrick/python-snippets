@@ -337,6 +337,36 @@ def set_ylabel_coords(x, y=0.5, ax=None):
     ax.yaxis.set_label_coords(x, y)
 
 
+def align_ylabels(xcoord, *axes):
+    """Align the y-axis labels of multiple axes.
+
+    Parameters
+    ----------
+    xcoord : float
+        x-coordinate of the y-axis labels
+    *axes : axis objects
+        The matplotlib axis objects to format
+
+    """
+    for ax in axes:
+        set_ylabel_coords(xcoord, ax=ax)
+
+
+def align_xlabels(ycoord, *axes):
+    """Align the x-axis labels of multiple axes
+
+    Parameters
+    ----------
+    ycoord : float
+        y-coordinate of the x-axis labels
+    *axes : axis objects
+        The matplotlib axis objects to format
+
+    """
+    for ax in axes:
+        set_xlabel_coords(ycoord, ax=ax)
+
+
 def no_xticklabels(ax=None):
     """Remove the tick labels on the x-axis (but leave the tick marks).
 
@@ -380,3 +410,79 @@ def set_figsize(width, height, fig=None):
         fig = plt.gcf()
     fig.set_figwidth(width)
     fig.set_figheight(height)
+
+
+def set_scientific(low, high, axis=None, ax=None):
+    """Set the axes or axis specified by `axis` to use scientific notation for
+    ticklabels, if the value is <10**low or >10**high.
+
+    Parameters
+    ----------
+    low : int
+        Lower exponent bound for non-scientific notation
+    high : int
+        Upper exponent bound for non-scientific notation
+    axis : str (default=None)
+        Which axis to format ('x', 'y', or None for both)
+    ax : axis object (default=pyplot.gca())
+        The matplotlib axis object to use
+
+    """
+    # get the axis
+    if ax is None:
+        ax = plt.gca()
+    # create the tick label formatter
+    fmt = plt.ScalarFormatter()
+    fmt.set_scientific(True)
+    fmt.set_powerlimits((low, high))
+    # format the axis/axes
+    if axis is None or axis == 'x':
+        ax.get_yaxis().set_major_formatter(fmt)
+    if axis is None or axis == 'y':
+        ax.get_yaxis().set_major_formatter(fmt)
+
+
+def sync_ylims(*axes):
+    """Synchronize the y-axis data limits for multiple axes. Uses the maximum
+    upper limit and minimum lower limit across all given axes.
+
+    Parameters
+    ----------
+    *axes : axis objects
+        List of matplotlib axis objects to format
+
+    Returns
+    -------
+    out : ymin, ymax
+        The computed bounds
+
+    """
+    ymins, ymaxs = zip(*[ax.get_ylim() for ax in axes])
+    ymin = min(ymins)
+    ymax = max(ymaxs)
+    for ax in axes:
+        ax.set_ylim(ymin, ymax)
+    return ymin, ymax
+
+
+def sync_xlims(*axes):
+    """Synchronize the x-axis data limits for multiple axes. Uses the maximum
+    upper limit and minimum lower limit across all given axes.
+
+    Parameters
+    ----------
+    *axes : axis objects
+        List of matplotlib axis objects to format
+
+    Returns
+    -------
+    out : yxin, xmax
+        The computed bounds
+
+    """
+    xmins, xmaxs = zip(*[ax.get_xlim() for ax in axes])
+    xmin = min(xmins)
+    xmax = max(xmaxs)
+    for ax in axes:
+        ax.set_xlim(xmin, xmax)
+        return xmin, xmax
