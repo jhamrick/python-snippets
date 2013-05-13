@@ -32,7 +32,6 @@ import numpy as np
 import os
 import sys
 
-mpl.rc('text', usetex=True)
 mpl.rc('font', family='serif', size=12)
 
 
