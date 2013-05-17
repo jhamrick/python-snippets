@@ -218,10 +218,10 @@ def gaussian_kernel(h, w, jit=True):
     return K
 
 
-def periodic_kernel(h, w, jit=True):
+def periodic_kernel(h, w, p, jit=True):
     """Produces a periodic kernel function, of the form:
 
-    $$k(x_1, x_2) = h^2\exp(-\frac{2\sin^2(\frac{x_1-x_2}{2})}{w^2})$$
+    $$k(x_1, x_2) = h^2\exp(-\frac{2\sin^2(\frac{x_1-x_2}{2p})}{w^2})$$
 
     Parameters
     ----------
@@ -229,6 +229,8 @@ def periodic_kernel(h, w, jit=True):
         Output scale kernel parameter
     w : number
         Input scale (Gaussian standard deviation) kernel parameter
+    p : number
+        Period kernel parameter
     jit : boolean (default=True)
         Whether JIT compile the function with numba
 
@@ -254,6 +256,8 @@ def periodic_kernel(h, w, jit=True):
         raise ValueError("invalid value for h: %s" % h)
     if w <= 0:
         raise ValueError("invalid value for w: %s" % w)
+    if p <= 0:
+        raise ValueError("invalid value for p: %s" % p)
 
     # compute constants
     c1 = log(h ** 2)
@@ -265,7 +269,7 @@ def periodic_kernel(h, w, jit=True):
         for i in xrange(x1.size):
             for j in xrange(x2.size):
                 diff = x1[i] - x2[j]
-                l = c1 + (c2 * np.sin(diff / 2.) ** 2)
+                l = c1 + (c2 * np.sin(diff / (2. * p)) ** 2)
 
                 # !!! underflow protection hack, because numba
                 # currently can't handle catching/raising exceptions
@@ -281,6 +285,7 @@ def periodic_kernel(h, w, jit=True):
     # save kernel parameters
     kernel.h = h
     kernel.w = w
+    kernel.p = p
 
     # JIT compile with numba
     if jit:
