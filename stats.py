@@ -132,7 +132,20 @@ def GP(K, x, y, xo, s=0):
         Kxx += np.eye(x.size) * (s ** 2)
 
     # compute cholesky factorization of Kxx for faster inversion
-    Li = inv(np.linalg.cholesky(Kxx))
+    try:
+        Li = inv(np.linalg.cholesky(Kxx))
+    except np.linalg.LinAlgError:
+        # matrix is singular, let's try adding some noise and see if
+        # we can invert it then
+        print "Warning: could not invert kernel matrix, trying with jitter"
+        m = np.mean(np.abs(Kxx))
+        noise = np.random.normal(0, m * 1e-6, Kxx.shape)
+        try:
+            Li = inv(np.linalg.cholesky(Kxx + noise))
+        except np.linalg.LinAlgError:
+            print Kxx
+            raise np.linalg.LinAlgError(
+                "Could not invert kernel matrix, even with jitter")
     alpha = dot(Li.T, dot(Li, y))
 
     Kxoxo = K(xo, xo)
