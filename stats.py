@@ -221,6 +221,7 @@ def gaussian_kernel(h, w, jit=True):
     # save kernel parameters
     kernel.h = h
     kernel.w = w
+    kernel.params = (h, w)
 
     # JIT compile with numba
     if jit:
@@ -299,6 +300,7 @@ def periodic_kernel(h, w, p, jit=True):
     kernel.h = h
     kernel.w = w
     kernel.p = p
+    kernel.params = (h, w, p)
 
     # JIT compile with numba
     if jit:
