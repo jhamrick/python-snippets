@@ -131,6 +131,10 @@ def GP(K, x, y, xo, s=0):
     if s > 0:
         Kxx += np.eye(x.size) * (s ** 2)
 
+    if np.isnan(Kxx).any():
+        print K.params, s
+        raise ArithmeticError("Kxx contains invalid values")
+
     # compute cholesky factorization of Kxx for faster inversion
     try:
         Li = inv(np.linalg.cholesky(Kxx))
@@ -143,7 +147,7 @@ def GP(K, x, y, xo, s=0):
         try:
             Li = inv(np.linalg.cholesky(Kxx + noise))
         except np.linalg.LinAlgError:
-            print Kxx
+            print K.params, s
             raise np.linalg.LinAlgError(
                 "Could not invert kernel matrix, even with jitter")
     alpha = dot(Li.T, dot(Li, y))
