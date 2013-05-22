@@ -28,12 +28,17 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import numpy as np
 import numba
+import sys
 
 from numpy import log, exp, dot
 from numpy.linalg import inv
 
+# constants for largest/smallest log values we can handle/
+MIN_LOG = np.log(sys.float_info.min)
+MAX_LOG = np.log(sys.float_info.max)
 
-def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
+
+def normalize(logarr, axis=-1):
     """Normalize an array of log-values.
 
     This function is very useful if you have an array of log
@@ -49,8 +54,6 @@ def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
         Array of log values
     axis: integer (default=-1)
         Axis over which to normalize
-    max_log_value: float (default=709.78271289338397)
-        Largest number that, when exponentiated, will not overflow
 
     Returns
     -------
@@ -67,7 +70,7 @@ def normalize(logarr, axis=-1, max_log_value=709.78271289338397):
     # get maximum value of array
     maxlogarr = logarr.max(axis=axis).reshape(shape)
     # calculate how much to shift the array up by
-    shift = max_log_value - maxlogarr - 2 - logarr.shape[axis]
+    shift = MAX_LOG - maxlogarr - 2 - logarr.shape[axis]
     shift[shift < 0] = 0
     # shift the array
     unnormed = logarr + shift
@@ -213,9 +216,9 @@ def gaussian_kernel(h, w, jit=True):
 
                 # !!! underflow protection hack, because numba
                 # currently can't handle catching/raising exceptions
-                if l < -709.78271289338397:
+                if l < MIN_LOG:
                     out[i, j] = 0
-                elif l > 709.78271289338397:
+                elif l > MAX_LOG:
                     out[i, j] = np.inf
                 else:
                     out[i, j] = exp(l)
@@ -291,9 +294,9 @@ def periodic_kernel(h, w, p, jit=True):
 
                 # !!! underflow protection hack, because numba
                 # currently can't handle catching/raising exceptions
-                if l < -709.78271289338397:
+                if l < MIN_LOG:
                     out[i, j] = 0
-                elif l > 709.78271289338397:
+                elif l > MAX_LOG:
                     out[i, j] = np.inf
                 else:
                     out[i, j] = exp(l)
