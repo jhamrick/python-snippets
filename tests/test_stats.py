@@ -36,7 +36,7 @@ from stats import GP, gaussian_kernel, periodic_kernel
 
 
 def check_gaussian_kernel(x, dx, h, w):
-    kernel = gaussian_kernel(h, w, jit=False)
+    kernel = gaussian_kernel(h, w)
     K = kernel(x, x)
     print "Kernel parameters:", kernel.params
 
@@ -50,7 +50,7 @@ def check_gaussian_kernel(x, dx, h, w):
 
 
 def check_periodic_kernel(x, dx, h, w, p):
-    kernel = periodic_kernel(h, w, p, jit=False)
+    kernel = periodic_kernel(h, w, p)
     K = kernel(x, x)
     print "Kernel parameters:", kernel.params
 
@@ -65,17 +65,13 @@ def check_periodic_kernel(x, dx, h, w, p):
 @raises(ValueError)
 def test_gaussian_kernel_params1():
     """Test invalid h parameter to stats.gaussian_kernel"""
-    gaussian_kernel(0, 1, False)
+    gaussian_kernel(0, 1)
 
 
 @raises(ValueError)
 def test_gaussian_kernel_params2():
     """Test invalid w parameter to stats.gaussian_kernel"""
-    gaussian_kernel(1, 0, False)
-
-
-# def test_gaussian_kernel_jit():
-#     gaussian_kernel(1, 1, True)
+    gaussian_kernel(1, 0)
 
 
 def test_gaussian_kernel():
@@ -90,17 +86,13 @@ def test_gaussian_kernel():
 @raises(ValueError)
 def test_periodic_kernel_params1():
     """Test invalid h parameter to stats.periodic_kernel"""
-    periodic_kernel(0, 1, 1, False)
+    periodic_kernel(0, 1, 1)
 
 
 @raises(ValueError)
 def test_periodic_kernel_params2():
     """Test invalid w parameter to stats.periodic_kernel"""
-    periodic_kernel(1, 0, 1, False)
-
-
-# def test_periodic_kernel_jit():
-#     periodic_kernel(1, 1, 1, True)
+    periodic_kernel(1, 0, 1)
 
 
 def test_periodic_kernel():
@@ -130,7 +122,7 @@ def test_gaussian_GP():
     for i in xrange(N_big):
         h = rand_h()
         w = rand_w()
-        kernel = gaussian_kernel(h, w, jit=False)
+        kernel = gaussian_kernel(h, w)
         yield (check_GP, kernel, x, y, 0)
 
 
@@ -143,5 +135,5 @@ def test_periodic_GP():
         h = rand_h()
         w = rand_w()
         p = rand_p()
-        kernel = periodic_kernel(h, w, p, jit=False)
+        kernel = periodic_kernel(h, w, p)
         yield (check_GP, kernel, x, y, 0)
