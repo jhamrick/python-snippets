@@ -27,7 +27,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import numpy as np
-import numba
+try:
+    import numba
+except ImportError:
+    numba = None
 
 from numpy import log, exp, dot
 from numpy.linalg import inv
@@ -114,7 +117,7 @@ def GP(K, x, y, xo, s=0):
     return mean, cov
 
 
-def gaussian_kernel(h, w, jit=True):
+def _gaussian_kernel(x1, x2, h, w):
     """Produces a squared exponential (Gaussian) kernel function of
     the form:
 
@@ -126,8 +129,50 @@ def gaussian_kernel(h, w, jit=True):
         Output scale kernel parameter
     w : number
         Input scale (Gaussian standard deviation) kernel parameter
-    jit : boolean (default=True)
-        Whether JIT compile the function with numba
+
+    References
+    ----------
+    Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes
+        for machine learning. MIT Press.
+
+    """
+
+    # compute constants
+    c = log(h ** 2)
+
+    out = np.empty((x1.size, x2.size))
+    for i in xrange(x1.size):
+        for j in xrange(x2.size):
+            diff = x1[i] - x2[j]
+            l = c + (-0.5 * (diff ** 2) / (w ** 2))
+
+            # !!! underflow protection hack, because numba
+            # currently can't handle catching/raising exceptions
+            if l < MIN_LOG:
+                out[i, j] = 0
+            elif l > MAX_LOG:
+                out[i, j] = np.inf
+            else:
+                out[i, j] = exp(l)
+
+    return out
+if numba:
+    _gaussian_kernel = numba.jit(
+        'f8[:,:](f8[:],f8[:],f8,f8)')(_gaussian_kernel)
+
+
+def gaussian_kernel(h, w):
+    """Produces a squared exponential (Gaussian) kernel function of
+    the form:
+
+    $$k(x_1, x_2) = h^2\exp(-\frac{(x_1-x_2)^2}{2w^2})$$
+
+    Parameters
+    ----------
+    h : number
+        Output scale kernel parameter
+    w : number
+        Input scale (Gaussian standard deviation) kernel parameter
 
     Returns
     -------
@@ -152,42 +197,18 @@ def gaussian_kernel(h, w, jit=True):
     if w <= 0:
         raise ValueError("invalid value for w: %s" % w)
 
-    # compute constants
-    c = log(h ** 2)
-
     def kernel(x1, x2):
-        out = np.empty((x1.size, x2.size))
-        for i in xrange(x1.size):
-            for j in xrange(x2.size):
-                diff = x1[i] - x2[j]
-                l = c + (-0.5 * (diff ** 2) / (w ** 2))
-
-                # !!! underflow protection hack, because numba
-                # currently can't handle catching/raising exceptions
-                if l < MIN_LOG:
-                    out[i, j] = 0
-                elif l > MAX_LOG:
-                    out[i, j] = np.inf
-                else:
-                    out[i, j] = exp(l)
-
-        return out
+        return _gaussian_kernel(x1, x2, h, w)
 
     # save kernel parameters
     kernel.h = h
     kernel.w = w
     kernel.params = (h, w)
 
-    # JIT compile with numba
-    if jit:
-        K = numba.jit('f8[:,:](f8[:],f8[:])')(kernel)
-    else:
-        K = kernel
-
-    return K
+    return kernel
 
 
-def periodic_kernel(h, w, p, jit=True):
+def _periodic_kernel(x1, x2, h, w, p):
     """Produces a periodic kernel function, of the form:
 
     $$k(x_1, x_2) = h^2\exp(-\frac{2\sin^2(\frac{x_1-x_2}{2p})}{w^2})$$
@@ -200,8 +221,53 @@ def periodic_kernel(h, w, p, jit=True):
         Input scale (Gaussian standard deviation) kernel parameter
     p : number
         Period kernel parameter
-    jit : boolean (default=True)
-        Whether JIT compile the function with numba
+
+    References
+    ----------
+    Rasmussen, C. E., & Williams, C. K. I. (2006). Gaussian processes
+        for machine learning. MIT Press.
+
+    """
+
+    # compute constants
+    c1 = log(h ** 2)
+    c2 = -2. / (w ** 2)
+
+    # compute constants to save on computation time
+    out = np.empty((x1.size, x2.size))
+    for i in xrange(x1.size):
+        for j in xrange(x2.size):
+            diff = x1[i] - x2[j]
+            l = c1 + (c2 * np.sin(diff / (2. * p)) ** 2)
+
+            # !!! underflow protection hack, because numba
+            # currently can't handle catching/raising exceptions
+            if l < MIN_LOG:
+                out[i, j] = 0
+            elif l > MAX_LOG:
+                out[i, j] = np.inf
+            else:
+                out[i, j] = exp(l)
+
+    return out
+if numba:
+    _periodic_kernel = numba.jit(
+        'f8[:,:](f8[:],f8[:],f8,f8,f8)')(_periodic_kernel)
+
+
+def periodic_kernel(h, w, p):
+    """Produces a periodic kernel function, of the form:
+
+    $$k(x_1, x_2) = h^2\exp(-\frac{2\sin^2(\frac{x_1-x_2}{2p})}{w^2})$$
+
+    Parameters
+    ----------
+    h : number
+        Output scale kernel parameter
+    w : number
+        Input scale (Gaussian standard deviation) kernel parameter
+    p : number
+        Period kernel parameter
 
     Returns
     -------
@@ -228,28 +294,8 @@ def periodic_kernel(h, w, p, jit=True):
     if p <= 0:
         raise ValueError("invalid value for p: %s" % p)
 
-    # compute constants
-    c1 = log(h ** 2)
-    c2 = -2. / (w ** 2)
-
     def kernel(x1, x2):
-        # compute constants to save on computation time
-        out = np.empty((x1.size, x2.size))
-        for i in xrange(x1.size):
-            for j in xrange(x2.size):
-                diff = x1[i] - x2[j]
-                l = c1 + (c2 * np.sin(diff / (2. * p)) ** 2)
-
-                # !!! underflow protection hack, because numba
-                # currently can't handle catching/raising exceptions
-                if l < MIN_LOG:
-                    out[i, j] = 0
-                elif l > MAX_LOG:
-                    out[i, j] = np.inf
-                else:
-                    out[i, j] = exp(l)
-
-        return out
+        return _periodic_kernel(x1, x2, h, w, p)
 
     # save kernel parameters
     kernel.h = h
@@ -257,13 +303,7 @@ def periodic_kernel(h, w, p, jit=True):
     kernel.p = p
     kernel.params = (h, w, p)
 
-    # JIT compile with numba
-    if jit:
-        K = numba.jit('f8[:,:](f8[:],f8[:])')(kernel)
-    else:
-        K = kernel
-
-    return K
+    return kernel
 
 
 def xcorr(x, y, circular=False, deg=False, nanrobust=False):
