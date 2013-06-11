@@ -35,6 +35,7 @@ from numpy import log, exp
 # constants for largest/smallest log values we can handle
 MIN_LOG = log(sys.float_info.min)
 MAX_LOG = log(sys.float_info.max)
+EPS = np.finfo(float).eps
 
 
 def normalize(logarr, axis=-1):
