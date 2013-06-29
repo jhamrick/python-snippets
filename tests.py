@@ -5,12 +5,14 @@ N_big = 20
 N_small = 5
 thresh = 1e-6
 
+from safemath import normalize
+from safemath import safe_log
+from safemath import safe_multiply
+
+
 ######################################################################
 # normalize
 ######################################################################
-
-from safemath import normalize
-
 
 def check_normalization_constants(arr, axis):
     sum = np.log(np.sum(arr, axis=axis))
@@ -65,9 +67,6 @@ def test_normalize_2x100000():
 # safe_log
 ######################################################################
 
-from safemath import safe_log
-
-
 def test_safe_log():
     arr = np.random.rand(10, 10) + 1
     log_arr1 = np.log(arr)
@@ -78,9 +77,6 @@ def test_safe_log():
 ######################################################################
 # safe_multiply
 ######################################################################
-
-from safemath import safe_multiply
-
 
 def test_safe_multiply():
     arr1 = np.random.randn(10, 10)
