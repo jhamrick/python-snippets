@@ -3,8 +3,12 @@
 Written by Jessica Hamrick
 jhamrick@berkeley.edu
 
-* `graphing.py` -- helper functions for graphing with
+The snippets package contains the following modules:
+
+* `circstats` -- circular statistics toolbox
+* `graphing` -- helper functions for graphing with
   matplotlib/pyplot
-* `ipynb.py` -- helper functions for working with the IPython Notebook
-* `stats.py` -- helper functions for working with
+* `ipynb` -- helper functions for working with the IPython Notebook
+* `safemath` -- helper functions for preventing overflow/underflow
+* `stats` -- helper functions for working with
   probabilities/statistics
