@@ -103,8 +103,9 @@ def wrapdiff(diff, deg=False):
         base = np.pi * 2
 
     i = np.abs(diff) > (base / 2.0)
-    diff[i] -= np.sign(diff[i]) * base
-    return diff
+    out = diff.copy()
+    out[i] -= np.sign(diff[i]) * base
+    return out
 
 
 def normalize(data, deg=False):
