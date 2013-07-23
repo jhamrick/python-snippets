@@ -32,8 +32,6 @@ import numpy as np
 import os
 import sys
 
-mpl.rc('font', family='serif', size=12)
-
 
 def save(path, fignum=None, close=True, width=None, height=None,
          ext=None, verbose=False):
