@@ -4,6 +4,7 @@ import json
 import numpy as np
 import os
 import pandas as pd
+from datetime import datetime
 
 
 def md5(data_path):
@@ -63,3 +64,68 @@ def load_datapackage(pth, verify_checksums=True):
         resources[resource['name']] = data
 
     return resources
+
+
+class DataPackage(dict):
+
+    def __init__(self, name, licenses):
+        self['name'] = name
+        self['datapackage_version'] = '1.0-beta.5'
+        self['licenses'] = []
+        for lid in licenses:
+            if lid == 'odc-by':
+                url = 'http://opendefinition.org/licenses/odc-by'
+            else:
+                raise ValueError("unrecognized license: %s" % lid)
+
+            self['licenses'].append(dict(id=lid, url=url))
+
+        self['title'] = None
+        self['description'] = None
+        self['homepage'] = None
+        self['version'] = '0.0.1'
+        self['sources'] = []
+        self['keywords'] = None
+        self['last_modified'] = datetime.now().isoformat(" ")
+        self['image'] = None
+        self['contributors'] = []
+        self['resources'] = []
+
+    def add_contributor(self, name, email):
+        self['contributors'].append(dict(name=name, email=email))
+
+    def add_resource(self, resource):
+        self['resources'].append(resource)
+
+    def save(self, pth):
+        with open(pth, "w") as fh:
+            json.dump(self, fh, indent=2)
+
+
+class Resource(dict):
+
+    def __init__(self, name, pth=None, data=None):
+        self['name'] = name
+        self['modified'] = datetime.now().isoformat(" ")
+
+        if not pth and not data:
+            raise ValueError("must specify either a path OR give raw data")
+        if pth and data:
+            raise ValueError("cannot specify both a pth and raw data")
+
+        if pth:
+            self['path'] = str(path(pth).joinpath(name))
+        elif data:
+            self['data'] = data
+
+    def calc_size(self, pth):
+        rpath = path(pth).joinpath(self['path'])
+        rsize = rpath.get_size()
+        self['size'] = rsize
+        return rsize
+
+    def calc_hash(self, pth):
+        rpath = path(pth).joinpath(self['path'])
+        rhash = md5(rpath)
+        self['hash'] = rhash
+        return rhash
