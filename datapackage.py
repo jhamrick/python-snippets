@@ -101,6 +101,27 @@ class DataPackage(dict):
         with open(pth, "w") as fh:
             json.dump(self, fh, indent=2)
 
+    def bump_major_version(self):
+        major, minor, patch = map(int, self['version'].split("."))
+        major += 1
+        minor = 0
+        patch = 0
+        self['version'] = "%d.%d.%d" % (major, minor, patch)
+        return self['version']
+
+    def bump_minor_version(self):
+        major, minor, patch = map(int, self['version'].split("."))
+        minor += 1
+        patch = 0
+        self['version'] = "%d.%d.%d" % (major, minor, patch)
+        return self['version']
+
+    def bump_patch_version(self):
+        major, minor, patch = map(int, self['version'].split("."))
+        patch += 1
+        self['version'] = "%d.%d.%d" % (major, minor, patch)
+        return self['version']
+
 
 class Resource(dict):
 
