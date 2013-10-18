@@ -120,7 +120,7 @@ class Resource(dict):
 
     def calc_size(self, pth):
         rpath = path(pth).joinpath(self['path'])
-        rsize = rpath.get_size()
+        rsize = rpath.getsize()
         self['size'] = rsize
         return rsize
 
