@@ -27,13 +27,14 @@ class DataPackage(dict):
         self['name'] = name
         self['datapackage_version'] = '1.0-beta.5'
         self['licenses'] = []
-        for lid in licenses:
-            if lid == 'odc-by':
-                url = 'http://opendefinition.org/licenses/odc-by'
-            else:
-                raise ValueError("unrecognized license: %s" % lid)
-
-            self['licenses'].append(dict(id=lid, url=url))
+        for l in licenses:
+            if not isinstance(l, dict):
+                if l == 'odc-by':
+                    url = 'http://opendefinition.org/licenses/odc-by'
+                else:
+                    raise ValueError("unrecognized license: %s" % l)
+                l = dict(id=l, url=url)
+            self['licenses'].append(l)
 
         self['title'] = None
         self['description'] = None
@@ -164,7 +165,7 @@ class Resource(dict):
         self['format'] = fmt
 
         if pth:
-            self['path'] = str(path(pth).joinpath(name))
+            self['path'] = pth
 
         self.data = data
         self.dpkg = None
@@ -184,7 +185,7 @@ class Resource(dict):
     @data.setter
     def data(self, val):
         self._data = val
-        if not self['path']:
+        if not hasattr(self, 'path'):
             self['data'] = val
 
     def save_data(self):
@@ -203,7 +204,7 @@ class Resource(dict):
         self['modified'] = datetime.now().isoformat(" ")
 
     def load_data(self, verify=True):
-        if self.data:
+        if self.data is not None:
             return self.data
 
         # check the file size
@@ -229,13 +230,13 @@ class Resource(dict):
         return self.data
 
     def update_size(self):
-        old_size = self['bytes']
+        old_size = self.get('bytes', None)
         new_size = self.abspath.getsize()
         self['bytes'] = new_size
         return old_size != new_size
 
     def update_hash(self):
-        old_hash = self['hash']
+        old_hash = self.get('hash', None)
         new_hash = md5(self.abspath)
         self['hash'] = new_hash
         return old_hash != new_hash
