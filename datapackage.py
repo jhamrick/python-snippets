@@ -46,8 +46,12 @@ class DataPackage(dict):
         self['contributors'] = []
         self['resources'] = []
 
-        self._load_path = None
-        self._resources = {}
+        self._path = None
+        self._resource_map = {}
+
+    @property
+    def abspath(self):
+        return self._path.joinpath(self['name']).abspath()
 
     @classmethod
     def load(cls, pth):
@@ -65,24 +69,29 @@ class DataPackage(dict):
         del dpjson['resources']
 
         dp = cls(name=name, licenses=licenses)
+        dp._path = pth.splitpath()[0]
         dp.update(dpjson)
+
+        if dp.abspath != pth:
+            raise ValueError("malformed datapackage")
 
         for resource in resources:
             rname = resource['name']
+            rfmt = resource['format']
             rpth = resource.get('path', None)
             rdata = resource.get('data', None)
 
             del resource['name']
+            del resource['format']
             if 'path' in resource:
                 del resource['path']
             if 'data' in resource:
                 del resource['data']
 
-            r = Resource(name=rname, pth=rpth, data=rdata)
+            r = Resource(name=rname, fmt=rfmt, pth=rpth, data=rdata)
             r.update(resource)
             dp.add_resource(r)
 
-        dp._load_path = pth
         return dp
 
     def add_contributor(self, name, email):
@@ -90,29 +99,40 @@ class DataPackage(dict):
 
     def add_resource(self, resource):
         self['resources'].append(resource)
-        self._resources[resource['name']] = (len(self['resources'])-1, None)
+        self._resource_map[resource['name']] = len(self['resources']) - 1
+        resource.dpkg = self
 
-    def get_resource(self, name, verify_checksums=True):
-        if not self._resources.get(name, None):
-            raise ValueError("no such resource: %s" % name)
-        idx, data = self._resources[name]
-        if not data:
-            r = self['resources'][idx]
-            data = r.load(self._load_path, verify_checksums=verify_checksums)
-            self._resources[name] = (idx, data)
-        return data
+    def get_resource(self, name):
+        return self['resources'][self._resource_map[name]]
 
-    def load_resources(self, verify_checksums=True):
-        for resource in self._resources:
-            self.get_resource(resource, verify_checksums=verify_checksums)
+    def load_resource(self, name, verify=True):
+        return self.get_resource(name).load_data(verify=verify)
 
-    def save(self, pth=None):
-        if not pth and not self._load_path:
-            raise ValueError("no target path given")
-        if pth:
-            self._load_path = pth
-        with open(self._load_path, "w") as fh:
+    def load_resources(self, verify=True):
+        for resource in self['resources']:
+            resource.load_data(verify=verify)
+
+    def save_metadata(self, dest=None):
+        if dest:
+            self._path = dest
+        self['last_modified'] = datetime.now().isoformat(" ")
+        metapath = self.abspath.joinpath("datapackage.json")
+        with open(metapath, "w") as fh:
             json.dump(self, fh, indent=2)
+
+    def save_data(self, dest=None):
+        if dest:
+            self._path = dest
+        for resource in self['resources']:
+            resource.save_data()
+
+    def save(self, dest=None):
+        if dest:
+            self._path = dest
+        if not self.abspath.exists():
+            self.abspath.makedirs_p()
+        self.save_data()
+        self.save_metadata()
 
     def bump_major_version(self):
         major, minor, patch = map(int, self['version'].split("."))
@@ -138,61 +158,84 @@ class DataPackage(dict):
 
 class Resource(dict):
 
-    def __init__(self, name, pth=None, data=None):
+    def __init__(self, name, fmt, data=None, pth=None):
         self['name'] = name
         self['modified'] = datetime.now().isoformat(" ")
-
-        if not pth and not data:
-            raise ValueError("must specify either a path OR give raw data")
-        if pth and data:
-            raise ValueError("cannot specify both a pth and raw data")
+        self['format'] = fmt
 
         if pth:
             self['path'] = str(path(pth).joinpath(name))
-        elif data:
-            self['data'] = data
 
-    def calc_size(self, pth):
-        rpath = path(pth).joinpath(self['path'])
-        rsize = rpath.getsize()
-        self['bytes'] = rsize
-        return rsize
+        self.data = data
+        self.dpkg = None
 
-    def calc_hash(self, pth):
-        rpath = path(pth).joinpath(self['path'])
-        rhash = md5(rpath)
-        self['hash'] = rhash
-        return rhash
-
-    def load(self, pth=None, verify_checksums=True):
-        if self.get('data', None):
-            return self['data']
-
+    @property
+    def abspath(self):
         if not self.get('path', None):
-            raise ValueError("malformed resource")
+            raise ValueError("no relative path specified")
+        if not self.dpkg:
+            raise ValueError("no linked datapackage")
+        return self.dpkg.abspath.joinpath(self['path'])
 
-        rpth = path(pth).joinpath(self['path'])
+    @property
+    def data(self):
+        return self._data
 
-        # check format and load data
+    @data.setter
+    def data(self, val):
+        self._data = val
+        if not self['path']:
+            self['data'] = val
+
+    def save_data(self):
         if self['format'] == 'csv':
-            data = pd.DataFrame.from_csv(rpth)
+            pd.DataFrame(self.data).to_csv(self.abspath)
         elif self['format'] == 'json':
-            with open(rpth, "r") as fh:
-                data = json.load(fh)
+            with open(self.abspath, "w") as fh:
+                json.dump(self.data, fh)
         elif self['format'] == 'npy':
-            data = np.load(rpth, mmap_mode='c')
+            np.save(self.abspath, np.array(self.data))
         else:
             raise ValueError("unsupported format: %s" % self['format'])
 
+        self.update_size()
+        self.update_hash()
+        self['modified'] = datetime.now().isoformat(" ")
+
+    def load_data(self, verify=True):
+        if self.data:
+            return self.data
+
         # check the file size
-        size = self['size']
-        if size != self.calc_size():
+        if self.update_size():
             raise IOError("resource has changed size on disk")
 
         # load the raw data and check md5
-        if verify_checksums:
-            rhash = self['hash']
-            if rhash != self.calc_hash():
-                raise IOError("resource checksum has changed")
+        if verify and self.update_hash():
+            raise IOError("resource checksum has changed")
 
-        return data
+        # check format and load data
+        if self['format'] == 'csv':
+            data = pd.DataFrame.from_csv(self.abspath)
+        elif self['format'] == 'json':
+            with open(self.abspath, "r") as fh:
+                data = json.load(fh)
+        elif self['format'] == 'npy':
+            data = np.load(self.abspath, mmap_mode='c')
+        else:
+            raise ValueError("unsupported format: %s" % self['format'])
+
+        self.data = data
+        return self.data
+
+    def update_size(self):
+        old_size = self['bytes']
+        new_size = self.abspath.getsize()
+        self['bytes'] = new_size
+        return old_size != new_size
+
+    def update_hash(self):
+        old_hash = self['hash']
+        new_hash = md5(self.abspath)
+        self['hash'] = new_hash
+        return old_hash != new_hash
