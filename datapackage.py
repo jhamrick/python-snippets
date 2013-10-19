@@ -189,6 +189,8 @@ class Resource(dict):
             self['data'] = val
 
     def save_data(self):
+        self['modified'] = datetime.now().isoformat(" ")
+
         if 'path' not in self:
             return
 
@@ -204,7 +206,6 @@ class Resource(dict):
 
         self.update_size()
         self.update_hash()
-        self['modified'] = datetime.now().isoformat(" ")
 
     def load_data(self, verify=True):
         if self.data is not None:
