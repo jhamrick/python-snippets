@@ -185,10 +185,13 @@ class Resource(dict):
     @data.setter
     def data(self, val):
         self._data = val
-        if not hasattr(self, 'path'):
+        if 'path' not in self:
             self['data'] = val
 
     def save_data(self):
+        if 'path' not in self:
+            return
+
         if self['format'] == 'csv':
             pd.DataFrame(self.data).to_csv(self.abspath)
         elif self['format'] == 'json':
