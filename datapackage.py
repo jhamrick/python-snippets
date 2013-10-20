@@ -56,7 +56,9 @@ class DataPackage(dict):
 
     @classmethod
     def load(cls, pth):
-        dpjson_pth = path(os.path.join(pth, "datapackage.json"))
+        pth = path(pth)
+
+        dpjson_pth = pth.joinpath("datapackage.json")
         if not dpjson_pth.exists():
             raise IOError("No metadata file datapackage.json")
         with open(dpjson_pth, "r") as fh:
