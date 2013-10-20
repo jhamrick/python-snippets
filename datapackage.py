@@ -73,7 +73,7 @@ class DataPackage(dict):
         dp._path = pth.splitpath()[0]
         dp.update(dpjson)
 
-        if dp.abspath != pth:
+        if dp.abspath != pth.abspath():
             raise ValueError("malformed datapackage")
 
         for resource in resources:
