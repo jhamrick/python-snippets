@@ -5,9 +5,9 @@ N_big = 20
 N_small = 5
 thresh = 1e-6
 
-from safemath import normalize
-from safemath import safe_log
-from safemath import safe_multiply
+from snippets.safemath import normalize
+from snippets.safemath import safe_log
+from snippets.safemath import safe_multiply
 
 
 ######################################################################
