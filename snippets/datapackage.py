@@ -100,6 +100,10 @@ class DataPackage(dict):
     def add_contributor(self, name, email):
         self['contributors'].append(dict(name=name, email=email))
 
+    def clear_resources(self):
+        self['resources'] = []
+        self._resource_map = {}
+
     def add_resource(self, resource):
         self['resources'].append(resource)
         self._resource_map[resource['name']] = len(self['resources']) - 1
